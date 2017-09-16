@@ -1,6 +1,16 @@
+import locale
+from terminaltables import AsciiTable
 import numpy as np
 import NFL_Draftkings as NFLDK
-from constants import ALL_POS_TEAM
+
+try:
+    locale.setlocale(locale.LC_ALL, 'en_US')
+except:
+    pass
+
+
+def cs(n):
+    return locale.format('%d', n, grouping=True)
 
 
 class Roster:
@@ -8,10 +18,31 @@ class Roster:
         self.players = []
 
     def __repr__(self):
-        s = '\n'.join(str(x) for x in self.sorted_players())
-        s += "\n\nProjected Score: %s" % self.projected()
-        s += "\tCost: $%s" % self.spent()
-        return s
+        table_data = []
+        headers = [
+            'Position',
+            'Player',
+            'Team',
+            'Matchup',
+            'Salary',
+            'Projection',
+            'vs. Avg.',
+            'Locked'
+        ]
+        table_data.append(headers)
+        for p in self.sorted_players():
+            table_data.append(p.to_table_row())
+
+        table = AsciiTable(table_data).table
+
+        aggregate_info = '\n\nProjected Score: {} \t Cost: ${}'.format(
+            self.projected(),
+            cs(self.spent()))
+
+        source = '\nProjection Source: {}'.format(
+            getattr(self, 'projection_source', None))
+
+        return table + aggregate_info + source
 
     def __eq__(self, roster):
         if self.__class__ == roster.__class__ and \
@@ -21,6 +52,14 @@ class Roster:
                     return False
             return True
         return False
+
+    @property
+    def projection_source(self):
+        return self._source
+
+    @projection_source.setter
+    def projection_source(self, source):
+        self._source = source
 
     def add_player(self, player):
         self.players.append(player)
@@ -35,7 +74,10 @@ class Roster:
         return self.POSITION_ORDER[player.pos]
 
     def sorted_players(self):
-        return sorted(self.players, key=self.position_order)
+        return sorted(
+            self.players,
+            key=lambda p: self.position_order(p)
+        )
 
 
 class NFLRoster(Roster):
@@ -58,12 +100,22 @@ class NBARoster(Roster):
     }
 
 
+class WNBARoster(Roster):
+    POSITION_ORDER = {
+        "PG": 0,
+        "SG": 1,
+        "SF": 2,
+        "PF": 3,
+    }
+
+
 class RosterSelect:
     @staticmethod
     def roster_gen(league):
         roster_dict = {
             'NBA': NBARoster(),
-            'NFL': NFLRoster()
+            'WNBA': WNBARoster(),
+            'NFL': NFLRoster(),
         }
         return roster_dict[league]
 
@@ -74,8 +126,10 @@ class Player:
     def __init__(self, pos, name, cost,
                  proj=0, projected_ownership_pct=0,
                  lineup_count=0,
+                 average_score=0,
                  matchup=None, team=None,  marked=None,
-                 lock=False):
+                 possible_positions=None,
+                 lock=False, multi_position=False):
         self.pos = pos
         if name == 'Chris Thompson':
             from random import random
@@ -85,28 +139,78 @@ class Player:
         self.team = team
         self.matchup = matchup
         self.proj = proj
+        self.average_score = average_score
         self.projected_ownership_pct = projected_ownership_pct
         self.lineup_count = lineup_count
         self.marked = marked
         self.lock = lock
+        self.multi_position = multi_position
+        self.possible_positions = possible_positions
+
+    def get_player_id(self, player_map):
+        return player_map[self.name + ' ' + self.possible_positions]
+
+    def to_table_row(self):
+        return [
+            self.formatted_position,
+            self.name,
+            self.team,
+            self.matchup,
+            cs(self.cost),
+            self.proj,
+            self.__format_v_avg(),
+            'LOCK' if self.lock else ''
+        ]
 
     def __repr__(self):
-        return "[{0: <2}] {1: <20} {2} {3} (${4}, {5}, {6}), {7}, {8}".format(
-                self.pos,
-                self.name,
-                self.team,
-                self.matchup,
-                self.cost,
-                self.proj,
-                self.get_ppd(),
-                self.projected_ownership_pct,
-                'LOCK' if self.lock else '')
+        v_avg = self.__format_v_avg()
+        player_dict = dict(
+            pos=self.formatted_position,
+            name=self.name,
+            team=self.team,
+            match=self.matchup,
+            cost=cs(self.cost),
+            proj=self.proj,
+            v_avg=v_avg,
+            lock='LOCK' if self.lock else ''
+        )
+
+        return "[{pos: <2}] {name: <20} {team} {match} " \
+               "(${cost}, {proj} ({v_avg})), {lock}".format(
+                **player_dict)
 
     def __eq__(self, player):
         return self.pos == player.pos and \
                self.name == player.name and \
                self.cost == player.cost and \
                self.team == player.team
+
+    @property
+    def solver_id(self):
+        return '{} {} {}'.format(self.name, self.pos, self.team)
+
+    @property
+    def formatted_position(self):
+        if self.multi_position:
+            return '{} ({})'.format(self.possible_positions, self.pos)
+        return self.pos
+
+    @property
+    def v_avg(self):
+        return self.proj - self.average_score
+
+    @property
+    def is_home(self):
+        match_up_teams = self.matchup.split(' ')[0]
+        return self.team == match_up_teams.split('@')[-1]
+
+    @property
+    def nba_general_position(self):
+        if self.pos == 'SG' or self.pos == 'PG':
+            return 'G'
+        elif self.pos == 'SF' or self.pos == 'PF':
+            return 'F'
+        return 'C'
 
     def get_ppd(self):
         return round((self.proj / self.cost) * 1000, 3)
@@ -157,38 +261,10 @@ class Player:
         for k, v in player_data.items():
             setattr(self, k, v)
 
-
-class Team:
-    def __init__(self, give):
-        self._set_team_pos(give)
-        self.team_cost = self._get_team_prop('cost')
-        self.team_proj = self._get_team_prop('proj')
-
-    def team_report(self):
-        for pos in ALL_POS_TEAM:
-            getattr(self, pos).player_report()
-
-        print 'Total Cost: ' + str(self.team_cost)
-        print 'Total Projected: ' + str(self.team_proj)
-
-    def contains_dups(self):
-        players = []
-        for pos in ALL_POS_TEAM:
-            name = getattr(self, pos).name
-            players.append(name)
-
-        return len(players) != len(set(players))
-
-    def _set_team_pos(self, give):
-        for idx, val in enumerate(give):
-            setattr(self, ALL_POS_TEAM[idx], val)
-
-    def _get_team_prop(self, prop):
-        val = 0
-        for pos in ALL_POS_TEAM:
-            val += int(getattr(getattr(self, pos), prop))
-
-        return val
+    def __format_v_avg(self):
+        if self.v_avg > 0:
+            return '\x1b[0;32;40m{}\x1b[0m'.format(self.v_avg)
+        return '\x1b[0;31;40m{}\x1b[0m'.format(self.v_avg)
 
 
 class Game:
@@ -197,7 +273,7 @@ class Game:
         self.opponent = opp
 
     def __repr__(self):
-        return "{} @ {}".format(self.team, self.opponent)
+        return '{} @ {}'.format(self.team, self.opponent)
 
     def team_in_game(self, team):
         return team == self.team or team == self.opponent

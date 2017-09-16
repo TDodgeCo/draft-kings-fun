@@ -2,44 +2,71 @@
 
 ## Introduction
 
-Special thanks to _swanson, who authored [this repo](https://github.com/swanson/degenerate), which mine is heavily based off of. I currently use data from [Fantasy Pros](http://www.fantasypros.com/) as the criteria to optimize on.
+![](marketing/NBA_OPTIMIZED.png)
+
+Special thanks to [swanson](https://github.com/swanson/), who authored [this repo](https://github.com/swanson/degenerate), which mine is heavily based off of.
 
 Pre-reqs:
 
+* Python 2 but NOT Python 3 compatible yet (currently working on implementation)
 * [ortools](https://developers.google.com/optimization/installing?hl=en)
+* `pip install -r requirements.txt`
 
-To run, download your desired week's salaries on DraftKings. For Mac users, this file will make its way into <code>~/Downloads/</code> as <code>DKSalaries.csv</code>. The script <code> new_week.sh</code> will move this file into its proper location if you're using a Mac (simply <code>bash new_week.sh</code>); otherwise, please do this step manually. It will also handle duplicate names in the CSV that would normally cause <code> ortools </code> to crash (currently only David Johnson has a shared name in the NFL).
+To run, download your desired week's salaries on DraftKings, and then run:
+ 
+```
+bash scripts/prepare_nfl_contest_data.sh
+```
 
-If you're not a Mac user, after downloading the CSV data and placing it in its proper location:
+Note that this script will error out if the CSV from DraftKings is not in `~/Downloads`.
 
-<pre><code>python manage-dups.py</pre></code>
+Next, scrape data from FantasyPros or Rotogrinders and allow for some mismatched data between the two sources:
 
-Next, pass in the current week to the script, scrape data from FantasyPros and allow for some mismatched data between the two sources:
-<pre><code>python optimize.py -mp 100 -s y</pre></code>
+```
+python optimize.py -mp 100 -s y -source nfl_rotogrinders
+```
 
-One important note here is that passing in <code>y</code> for the scrape option will create <code>fantasy-pros.csv</code>. However, once you've scraped once, there's no need to do again.
+Or, use your own projection source:
+
+```
+python optimize.py -mp 100 -s n -projection_file "/Users/benbrostoff/Downloads/my_projections.csv"
+```
+
+Note that any projection file you provide must include `playername` and `points` as header names.
+
+One important note here is that passing in <code>y</code> for the scrape option will create <code>current-projections.csv</code>. However, once you've scraped once, there's no need to do again.
 
 ## Optimization Options
 
 Force a QB/WR or QB/TE combination from a particular team. For instance, if I wanted a guaranteed Cam Newton / Greg Olsen duo:
 
-<pre><code>python optimize.py -mp 100 -duo CAR -dtype TE</pre></code>
+```
+python optimize.py -mp 100 -duo CAR -dtype TE
+```
 
-Another example pairing DeAndre Hopkins and Brian Hoyer:
+Another example pairing Antonio Brown and Ben Roethlisberger:
 
-<pre><code>python optimize.py -mp 100 -duo HOU -dtype WR</pre></code>
+```
+python optimize.py -mp 100 -duo PIT -dtype WR
+```
 
 Limit same team representation except for QB / skill player combos. Example:
 
-<pre><code>python optimize.py -mp 100 -limit y</pre></code>
+```
+python optimize.py -mp 100 -limit y
+```
 
 Run the optimizer multiple times and continually eliminate pre-optimized players from the lineup. For instance, to run three different iterations and generate three different sets of players:
 
-<pre><code>python optimize.py -i 3</pre></code>
+```
+python optimize.py -i 3
+```
 
 At any time, you can get a list of all possible options via:
 
-<pre><code>python optimize.py --help</pre></code>
+```
+python optimize.py --help
+```
 
 ## Generating CSV for uploading multiple lineups to DraftKings
 
@@ -50,12 +77,12 @@ To use this feature:
 
 1. Download the weekly salaries CSV from DraftKings
 (containing player name, DK-estimated points, salary, etc).
-2. Run `bash new_week.sh`.
+2. Run `bash scripts/prepare_<nba/nfl>_contest_data.sh`.
 3. Download the [CSV upload template](https://www.draftkings.com/lineup/upload) and get the file location (probably something like `~/Downloads/DKSalaries.csv`). *Note - this file has the same name as the weekly salaries CSV when downloaded from DraftKings, which can be confusing.*
-4. Run `python optimize.py -pids <upload_tpl_location>`.
+4. Run `python optimize.py -pids <upload_tpl_location>`. Remember to specify league, constraints, number of iterations to run, etc.
 5. Upload the newly generated file to DraftKings from `data/current-upload.csv`.
 
-I find this feature is extremely useful for "saving" lineups in DraftKings - one nice workflow is to run the optimizer always with the `--pids` flag and continually upload the lineups to DK.
+One nice workflow is to run the optimizer with the `-keep_pids` flag after you create your CSV; this option will put future optimizations in the same CSV file.
 
 ## Projected Ownership Percentages (Experimental)
 
@@ -67,15 +94,25 @@ python optimize.py -po_location 'data/ownership.csv' -po 15
 
 ## NBA
 
-More to come here, but an NBA option exists for NBA contests. Currently it uses average PPG provided by DraftKings to optimize on:
+An NBA option exists for NBA contests. After downloading the DraftKings salaries for a contest:
 
-<pre><code>python optimize.py -l NBA -s n</pre></code>
+```
+bash scripts/prepare_nba_contest_data.sh
+```
 
-To do:
+Currently, Rotogrinders and Numberfire are the only available datasources:
 
-* Require QB to have at least one WR on team in lineup 
-* More data
-* Find better way of combining data sets on name
-* Add virtualenv / automate dependencies installation
-* Improve NBA combination testing
-* Testing
+```
+python optimize.py -l NBA -source nba_rotogrinders
+python optimize.py -l NBA -source nba_number_fire
+```
+
+## WNBA
+
+A WNBA option is available, but users must provide their own projection source:
+
+```
+bash scripts/prepare_nba_contest_data.sh
+python optimize.py -l WNBA -projection_file "/Users/benbrostoff/Downloads/my_projections.csv" -s No
+```
+

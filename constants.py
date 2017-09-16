@@ -1,74 +1,55 @@
-ALL_POS = ['QB', 'RB', 'WR', 'TE', 'DST']
-ALL_POS_TEAM = ['QB', 'RB1', 'RB2',
-                'WR1', 'WR2', 'WR3', 'FLEX',
-                'TE', 'DST']
-
-COMBO_TEAM_LIMITS_NFL = []
-ALL_NFL_TEAMS = [
- 'GB',
- 'MIN',
- 'MIA',
- 'CAR',
- 'ATL',
- 'OAK',
- 'CIN',
- 'NYJ',
- 'DEN',
- 'DET',
- 'BAL',
- 'NYG',
- 'TEN',
- 'NO',
- 'DAL',
- 'NE',
- 'SEA',
- 'CLE',
- 'TB',
- 'PIT',
- 'CHI',
- 'HOU',
- 'WAS',
- 'JAX',
- 'KC',
- 'PHI',
- 'BUF',
- 'IND',
- 'ARI',
- 'SF',
- 'LA',
- 'D/ST',
- 'SD']
-
-for team in ALL_NFL_TEAMS:
-    COMBO_TEAM_LIMITS_NFL.append([team, 0, 1])
-
+ALL_POS = ('QB', 'RB', 'WR', 'TE', 'DST')
 SALARY_CAP = 50000
 
 ROSTER_SIZE = {
-  'NFL': 9,
-  'NBA': 8
+    'NFL': 9,
+    'NBA': 8,
+    'WNBA': 6,
 }
 
 
-def get_nfl_positions(te_upper=2):
+def get_nfl_positions(
+    rb_min=2,
+    wr_min=3,
+    te_min=1,
+    te_upper=2
+):
     return [
         ["QB", 1, 1],
-        ["RB", 2, 3],
-        ["WR", 3, 4],
-        ["TE", 1, te_upper],
+        ["RB", rb_min, 3],
+        ["WR", wr_min, 4],
+        ["TE", te_min, te_upper],
         ["DST", 1, 1]
     ]
 
+
 POSITIONS = {
-  'NBA': [
-    ["PG", 1, 3],
-    ["SG", 1, 3],
-    ["SF", 1, 3],
-    ["PF", 1, 3],
-    ["C", 1, 2]
-  ],
-  'NFL': get_nfl_positions()
+    'NBA': [
+        ["PG", 1, 3],
+        ["SG", 1, 3],
+        ["SF", 1, 3],
+        ["PF", 1, 3],
+        ["C", 1, 2]
+      ],
+    'WNBA': [
+        ['PG', 1, 3],
+        ['SG', 1, 3],
+        ['SF', 1, 4],
+        ['PF', 1, 4],
+    ],
+    'NFL': get_nfl_positions()
 }
+
+NBA_GENERAL_POSITIONS = [
+    ['G', 3, 4],
+    ['F', 3, 4],
+    ['C', 1, 2],
+]
+
+WNBA_GENERAL_POSITIONS = [
+    ['G', 2, 3],
+    ['F', 3, 4],
+]
 
 DUO_TYPE = {
   'wr': [

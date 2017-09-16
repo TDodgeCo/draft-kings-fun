@@ -1,10 +1,10 @@
 import csv
 from itertools import islice
 
-import dke_exceptions as dke
-from data_cleaning_constants import RENAMES
+import draft_kings_fun.dke_exceptions as dke
+from draft_kings_fun.nfl.data_cleaning_constants import RENAMES
 
-import os 
+import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 upload_file = dir_path + '/data/current-upload.csv'
@@ -40,7 +40,6 @@ def map_pids(pid_file):
         f = islice(open(pid_file, "r"), n, None)
         reader = csv.DictReader(f, fieldnames=fields)
         for line in reader:
-            print(line)
             player_map[line['Name'] + " " + line['Position']] = line['ID']
 
     return player_map

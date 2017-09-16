@@ -10,16 +10,12 @@ with open(dk_csv, 'rb') as f:
         new_row = row
         for player in cons.DUPLICATES:
             if player['name'] in row:
-                if player['team'] not in row:
-                    print "Skipping non-key duplicate %s" % player['name']
+                if player['team'] in row:
+                    print(
+                        'Skipping non-key duplicate {} on {}'
+                        .format(player['name'], player['team'])
+                    )
                     new_row = None
-
-        for player in cons.RENAMES:
-            if player['dk_name'] in row:
-                print "Changed name for %s in CSV" % player['rename']
-                new_row = [player['rename'] if x == player['dk_name']
-                           else x for x in row]
-
         if new_row:
             new_rows.append(new_row)
 
