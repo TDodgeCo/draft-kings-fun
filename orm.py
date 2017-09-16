@@ -77,6 +77,9 @@ class Player:
                  matchup=None, team=None,  marked=None,
                  lock=False):
         self.pos = pos
+        if name == 'Chris Thompson':
+            from random import random
+            name = 'Afdsfsd' + str(random())
         self.name = name
         self.cost = int(cost)
         self.team = team

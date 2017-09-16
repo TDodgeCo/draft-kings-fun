@@ -19,6 +19,9 @@ def scrape():
         print(content)
         cr = csv.reader(content.splitlines(), delimiter=',')
         for p in list(cr):
+            if p[0] in ['Chris Thompson']:
+                continue
+
             if p[0] in [x['name'] for x in DUPLICATES]:
                 entry = [x for x in DUPLICATES if
                          x['name'] == p[0]][0]
