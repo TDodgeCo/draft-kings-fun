@@ -6,6 +6,7 @@ ROSTER_SIZE = {
     'NBA': 8,
     'WNBA': 6,
     'MLB': 10,
+    'AFL': 9
 }
 
 
@@ -47,7 +48,13 @@ POSITIONS = {
         ['3B', 1, 1],
         ['SS', 1, 1],
         ['OF', 3, 3],
-    ]
+    ],
+    'AFL': [
+        ['FWD', 2, 2],
+        ['MID', 4, 4],
+        ['DEF', 2, 2],
+        ['RUC', 1, 1],
+    ],
 }
 
 NBA_GENERAL_POSITIONS = [
